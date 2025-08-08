@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RHG INTERIOR HOMES LTD — Invoice</title>
+<style>
+:root {
+  --bg: #f7f6f4;
+  --text: #111;
+  --muted: #666;
+  --accent: #c74b3a;
+  --max-width: 1100px;
+}
+
+/* Reset-ish */
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color:var(--text);
+  background: linear-gradient(180deg,#fff 0%, #fefefe 100%);
+  min-height:100vh;
+  position:relative;
+  overflow-y:auto;
+}
+
+/* Canvas behind content */
+#bg-canvas{
+  position:fixed;
+  inset:0;
+  z-index:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  opacity:0.9;
+}
+
+/* Content above shader */
+header.topbar, main.container, footer.help { position:relative; z-index:1; }
+
+.topbar{
+  max-width:var(--max-width);
+  margin:20px auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:8px 12px;
+}
+.topbar h1{font-size:1rem;margin:0;font-weight:600;color:var(--muted);}
+.controls button{margin-left:8px;padding:6px 10px;border-radius:6px;border:1px solid #ddd;background:#fff;cursor:pointer}
+.controls .primary{background:var(--accent);color:#fff;border-color:transparent}
+
+/* Layout */
+.container{
+  max-width:var(--max-width);
+  margin:12px auto 60px;
+  display:grid;
+  grid-template-columns:1fr 540px;
+  gap:20px;
+  padding:0 12px;
+}
+.editor{background:rgba(255,255,255,0.9);padding:16px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.04);overflow:auto}
+.preview{background:transparent;padding:8px}
+
+/* Form styles */
+form label{display:block;margin-bottom:10px;font-size:0.9rem}
+form input[type="text"], form input[type="date"], form input[type="number"], form textarea{
+  display:block;width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;margin-top:6px;font-size:0.95rem;
+}
+form textarea{min-height:52px;resize:vertical}
+
+fieldset{border:1px solid #eee;padding:12px;border-radius:8px;margin-bottom:12px}
+legend{font-weight:600;padding:0 6px;color:var(--muted)}
+
+/* Items table */
+#itemsTable{width:100%;border-collapse:collapse;margin-top:8px}
+#itemsTable th, #itemsTable td{border:1px solid #e6e6e6;padding:8px;font-size:0.92rem}
+#itemsTable td input, #itemsTable td textarea{width:100%;border:none;padding:4px;font-size:0.92rem}
+.item-controls{margin-top:8px}
+
+/* Invoice preview (A4-like) */
+.invoice-a4{
+  width:100%;
+  max-width: 794px; /* A4 width at 96dpi approx, but responsive */
+  margin:0 auto;
+  background:#fff;
+  box-shadow:0 6px 20px rgba(0,0,0,0.06);
+  padding:28px;
+  box-sizing:border-box;
+  color:var(--text);
+  font-size:14px;
+}
+
+/* Header area */
+.inv-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.inv-company{max-width:60%}
+.inv-company img{max-width:220px;height:auto;display:block;margin-bottom:8px}
+.inv-title{text-align:right}
+.inv-title h2{font-family: "Times New Roman", Times, serif;font-size:48px;margin:0;color:var(--text)}
+.inv-meta{margin-top:6px;font-size:0.95rem;color:var(--muted);text-align:right}
+
+/* Company details */
+.company-details{font-weight:600;margin-bottom:8px}
+.company-lines{font-size:0.95rem;color:var(--muted);white-space:pre-line}
+
+/* Items & table */
+.inv-table{width:100%;border-collapse:collapse;margin-top:50px}
+.inv-table th, .inv-table td{border:1px solid #ddd;padding:10px;vertical-align:top}
+.inv-table th{background:#fafafa;font-weight:600;text-align:left}
+.amount{width:140px;text-align:right}
+.totals{margin-top:12px;width:100%;display:flex;justify-content:flex-end}
+.totals table{border-collapse:collapse;width:320px}
+.totals td{padding:8px;border:1px solid #eee;text-align:right}
+.totals .label{background:#fafafa;text-align:left;padding-left:12px;color:var(--muted)}
+.totals .total{font-weight:800;font-size:1.05rem}
+
+/* Footer notes */
+.inv-notes{margin-top:16px;font-size:0.92rem;color:var(--muted)}
+
+/* Responsive */
+@media (max-width: 980px){
+  .container{grid-template-columns:1fr; padding:0 12px;}
+  .invoice-a4{max-width:100%}
+}
+
+/* Print rules */
+@media print{
+  :root{background:#fff}
+  body{background:#fff}
+  header.topbar, .item-controls, .controls, footer.help, .editor{display:none !important}
+  .preview{padding:0}
+  .invoice-a4{
+    box-shadow:none;
+    margin:0;
+    width:auto;
+    padding:18mm;
+  }
+  @page{
+    size: A4;
+    margin: 10mm;
+  }
+  /* Force white background for logo and invoice */
+  .invoice-a4{background:#fff; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+  img{ -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+  /* Keep table rows together if possible */
+  .inv-table tr, .inv-table td{page-break-inside: avoid; break-inside: avoid;}
+  
+  /* CRITICAL STYLES FOR TABLE VISIBILITY */
+  .inv-table, .inv-table th, .inv-table td {
+    border: 1px solid #000 !important;
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  .inv-table th {
+    background: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  .totals td {
+    border: 1px solid #000 !important;
+  }
+  .totals .label {
+    background: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  table {
+    border-collapse: collapse !important;
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>RHG INTERIOR HOMES LTD — Invoice</h1>
+  <div class="controls">
+    <button id="saveBtn">💾 Save</button>
+    <button id="loadBtn">📂 Load</button>
+    <button id="downloadJsonBtn">📥 Export JSON</button>
+    <button id="printBtn" class="primary">🖨️ Print / PDF</button>
+    <input type="file" id="uploadJson" accept=".json" style="display:none">
+  </div>
+</header>
+
+<main class="container">
+  <form id="invoiceForm" class="editor">
+    <fieldset>
+      <legend>Company Details</legend>
+      <label>Company Name<input type="text" name="company.name"></label>
+      <label>Address<textarea name="company.address" placeholder="One line per address part"></textarea></label>
+      <label>GST #<input type="text" name="company.gst"></label>
+      <label>Contact<input type="text" name="company.contact"></label>
+      <label>Logo Path<input type="text" name="company.logo" value="logo.png"></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Invoice Details</legend>
+      <label>Invoice #<input type="text" name="invoice.number"></label>
+      <label>Date<input type="date" name="invoice.date"></label>
+      <label>Client<input type="text" name="invoice.client"></label>
+      <label>Tax Rate %<input type="number" name="invoice.taxRate" step="0.1"></label>
+      <label>Notes<textarea name="invoice.notes" placeholder="Payment terms, etc."></textarea></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Items</legend>
+      <table id="itemsTable">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Description</th>
+            <th>Units</th>
+            <th>Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="item-controls">
+        <button type="button" id="addItemBtn">+ Add Item</button>
+      </div>
+    </fieldset>
+  </form>
+
+  <div class="preview">
+    <div id="invoicePreview" class="invoice-a4"></div>
+  </div>
+</main>
+
+<script>
+/* app.js - Editable invoice + preview + print + localStorage
+   Configurable constants at top:
+*/
+const LOGO_PATH = 'logo.png';
+const DEFAULT_TAX_RATE = 12;
+const PAGE_TITLE = 'RHG INTERIOR HOMES LTD — Invoice';
+
+// Utility to select
+const $ = (s,el=document) => el.querySelector(s);
+const $$ = (s,el=document) => Array.from(el.querySelectorAll(s));
+
+// Sample seed data
+const SAMPLE = {
+  company: {
+    name: "RHG INTERIOR HOMES LTD",
+    address: ["114 Paramount Rd","Winnipeg MB R2X 2W3"],
+    gst: "781299532rt0001",
+    contact: "2046980121",
+    logo: LOGO_PATH
+  },
+  invoice: {
+    number: "1788",
+    date: "2025-06-29",
+    client: "KRYPTEIA GROUP INTERNATIONAL CANADA INC",
+    items: [
+      {item:"Product", description:"Customized Windows Blinds", units:"", amount:1100.00},
+      {item:"Premium", description:"Aluminium Facia And Dust free Fabric", units:"", amount:0}
+    ],
+    taxRate: DEFAULT_TAX_RATE,
+    notes: ""
+  }
+};
+
+// Form and preview elements
+const form = $('#invoiceForm');
+const itemsTbody = $('#itemsTable tbody');
+const addItemBtn = $('#addItemBtn');
+const printBtn = $('#printBtn');
+const saveBtn = $('#saveBtn');
+const loadBtn = $('#loadBtn');
+const downloadJsonBtn = $('#downloadJsonBtn');
+const uploadJson = $('#uploadJson');
+
+const invoicePreview = $('#invoicePreview');
+
+let state = JSON.parse(JSON.stringify(SAMPLE));
+
+// Populate items table UI
+function renderItemsEditor(){
+  itemsTbody.innerHTML = '';
+  state.invoice.items.forEach((row, idx) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input data-idx="${idx}" data-field="item" value="${escapeHtml(row.item)}" /></td>
+      <td><textarea data-idx="${idx}" data-field="description">${escapeHtml(row.description)}</textarea></td>
+      <td><input data-idx="${idx}" data-field="units" value="${escapeHtml(row.units)}" /></td>
+      <td><input data-idx="${idx}" data-field="amount" type="number" step="0.01" value="${Number(row.amount).toFixed(2)}" /></td>
+      <td><button data-remove="${idx}" type="button">✕</button></td>
+    `;
+    itemsTbody.appendChild(tr);
+  });
+}
+
+// Fill form fields (company + invoice)
+function populateForm(){
+  form['company.name'].value = state.company.name || '';
+  form['company.address'].value = (state.company.address || []).join('\n');
+  form['company.gst'].value = state.company.gst || '';
+  form['company.contact'].value = state.company.contact || '';
+  form['company.logo'].value = state.company.logo || LOGO_PATH;
+
+  form['invoice.number'].value = state.invoice.number || '';
+  form['invoice.date'].value = state.invoice.date || new Date().toISOString().slice(0,10);
+  form['invoice.client'].value = state.invoice.client || '';
+  form['invoice.taxRate'].value = state.invoice.taxRate ?? DEFAULT_TAX_RATE;
+  form['invoice.notes'].value = state.invoice.notes || '';
+  renderItemsEditor();
+}
+
+// Read from form into state
+function readForm(){
+  state.company.name = form['company.name'].value;
+  state.company.address = form['company.address'].value.split(/\r?\n/).map(s=>s.trim()).filter(s=>s);
+  state.company.gst = form['company.gst'].value;
+  state.company.contact = form['company.contact'].value;
+  state.company.logo = form['company.logo'].value || LOGO_PATH;
+
+  state.invoice.number = form['invoice.number'].value;
+  state.invoice.date = form['invoice.date'].value;
+  state.invoice.client = form['invoice.client'].value;
+  state.invoice.taxRate = parseFloat(form['invoice.taxRate'].value) || 0;
+  state.invoice.notes = form['invoice.notes'].value;
+
+  // read items table
+  const rows = $$('[data-idx]', itemsTbody);
+  rows.forEach(el => {
+    const idx = Number(el.dataset.idx);
+    const field = el.dataset.field;
+    // (not used here)
+  });
+  // Instead parse rows directly:
+  state.invoice.items = [];
+  for(const tr of itemsTbody.querySelectorAll('tr')) {
+    const item = tr.querySelector('input[data-field="item"]')?.value || '';
+    const desc = tr.querySelector('textarea[data-field="description"]')?.value || '';
+    const units = tr.querySelector('input[data-field="units"]')?.value || '';
+    const amount = parseFloat(tr.querySelector('input[data-field="amount"]')?.value || 0) || 0;
+    state.invoice.items.push({item, description:desc, units, amount});
+  }
+}
+
+// Render the invoice preview DOM
+function renderPreview(){
+  // Ensure data is current
+  readForm();
+
+  const c = state.company;
+  const inv = state.invoice;
+
+  // Build HTML
+  invoicePreview.innerHTML = `
+    <div class="invoice-a4-inner">
+      <div class="inv-header">
+        <div class="inv-company">
+          <img src="${escapeHtml(c.logo || LOGO_PATH)}" alt="${escapeHtml(c.name)} logo" onerror="this.style.display='none'">
+          <div class="company-details">${escapeHtml(c.name)}</div>
+          <div class="company-lines">${escapeHtml((c.address||[]).join('\n'))}</div>
+          <div class="company-lines">GST #: ${escapeHtml(c.gst||'')}</div>
+          <div class="company-lines">Contact: ${escapeHtml(c.contact||'')}</div>
+        </div>
+        <div class="inv-title">
+          <h2>Invoice</h2>
+          <div class="inv-meta">
+            <div>Invoice # ${escapeHtml(inv.number||'')}</div>
+            <div>DATE: ${escapeHtml(inv.date||'')}</div>
+            <div style="margin-top:8px;font-weight:600;">To: ${escapeHtml(inv.client||'')}</div>
+            <div style="height: 4em;"></div>
+          </div>
+        </div>
+      </div>
+
+      <table class="inv-table" role="table" aria-label="Invoice items" style="border-collapse: collapse; width: 100%;">
+        <thead>
+          <tr><th style="width:120px; border: 1px solid #000;">Item</th><th style="border: 1px solid #000;">Description</th><th style="width:80px; border: 1px solid #000;">Units</th><th class="amount" style="border: 1px solid #000;">Amount</th></tr>
+        </thead>
+        <tbody>
+          ${inv.items.map(it => `
+            <tr>
+              <td style="vertical-align:top; border: 1px solid #000;">${escapeHtml(it.item||'')}</td>
+              <td style="white-space:pre-wrap; border: 1px solid #000;">${escapeHtml(it.description||'')}</td>
+              <td style="text-align:center; border: 1px solid #000;">${escapeHtml(it.units||'')}</td>
+              <td class="amount" style="border: 1px solid #000;">$${numberFormat(it.amount||0)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+
+      <div class="totals" aria-hidden="true">
+        <table style="border-collapse: collapse; width: 100%;">
+          <tr><td class="label" style="border: 1px solid #000;">Subtotal</td><td style="border: 1px solid #000;">$${numberFormat(calcSubtotal())}</td></tr>
+          <tr><td class="label" style="border: 1px solid #000;">TAX (${numberFormat(inv.taxRate)}%)</td><td style="border: 1px solid #000;">$${numberFormat(calcTax())}</td></tr>
+          <tr><td class="label total" style="border: 1px solid #000;">TOTAL</td><td class="total" style="border: 1px solid #000;">$${numberFormat(calcTotal())}</td></tr>
+        </table>
+      </div>
+
+      <div class="inv-notes">${escapeHtml(inv.notes || '')}</div>
+    </div>
+  `;
+}
+
+// Calculation helpers
+function calcSubtotal(){
+  return state.invoice.items.reduce((s,i)=>s + (parseFloat(i.amount)||0), 0);
+}
+function calcTax(){
+  return calcSubtotal() * ((state.invoice.taxRate||0)/100);
+}
+function calcTotal(){
+  return calcSubtotal() + calcTax();
+}
+function numberFormat(n){
+  return Number(n).toFixed(2);
+}
+
+// Escape helper for safety in injection
+function escapeHtml(s){
+  if(s==null) return '';
+  return String(s)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','<')
+    .replaceAll('>','>')
+    .replaceAll('"','&quot;');
+}
+
+/* Events */
+
+// Listen for changes in top-level fields
+form.addEventListener('input', (e)=>{
+  // If invoice fields changed, update state and re-render preview live
+  readForm();
+  renderPreview();
+});
+
+// Items add/remove/edit
+addItemBtn.addEventListener('click', () => {
+  state.invoice.items.push({item:"",description:"",units:"",amount:0});
+  renderItemsEditor();
+});
+itemsTbody.addEventListener('click',(e)=>{
+  const rem = e.target.closest('[data-remove]');
+  if(rem){
+    const idx = Number(rem.dataset.remove);
+    if(!isNaN(idx)){
+      state.invoice.items.splice(idx,1);
+      renderItemsEditor();
+      renderPreview();
+    }
+  }
+});
+itemsTbody.addEventListener('input',(e)=>{
+  const target = e.target;
+  const idx = target.dataset.idx;
+  const field = target.dataset.field;
+  if(typeof idx !== 'undefined' && typeof field !== 'undefined'){
+    const i = Number(idx);
+    const value = target.value;
+    if(!isNaN(i) && state.invoice.items[i]){
+      if(field === 'amount') state.invoice.items[i][field] = parseFloat(value) || 0;
+      else state.invoice.items[i][field] = value;
+      renderPreview();
+    }
+  }
+});
+
+// Save / Load localStorage
+saveBtn.addEventListener('click', ()=>{
+  readForm();
+  localStorage.setItem('invoice_data_v1', JSON.stringify(state));
+  alert('Saved to local storage.');
+});
+loadBtn.addEventListener('click', ()=>{
+  const raw = localStorage.getItem('invoice_data_v1');
+  if(!raw){ alert('No saved invoice in localStorage.'); return; }
+  state = JSON.parse(raw);
+  populateForm();
+  renderPreview();
+});
+
+// JSON Download / Upload
+downloadJsonBtn.addEventListener('click', ()=>{
+  readForm();
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `invoice_${state.invoice.number || 'export'}.json`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+$('#downloadJsonBtn').addEventListener('click', ()=>{});
+$('#uploadJson')?.addEventListener('change', (ev)=>{
+  const f = ev.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      state = JSON.parse(reader.result);
+      populateForm();
+      renderPreview();
+      alert('Invoice loaded from file.');
+    } catch(err){ alert('Invalid JSON file.'); }
+  };
+  reader.readAsText(f);
+});
+document.getElementById('downloadJsonBtn').addEventListener('click', ()=>{});
+// upload button trigger
+document.getElementById('loadBtn').addEventListener('click', ()=>$('#uploadJson').click());
+
+// Print
+printBtn.addEventListener('click', ()=>{
+  // ensure preview up-to-date
+  readForm(); renderPreview();
+
+  // scroll preview into view for some browsers to render images before print
+  invoicePreview.scrollIntoView({behavior:'auto', block:'center'});
+
+  // call native print - user chooses "Save as PDF"
+  window.print();
+});
+
+// Initial bootstrap
+function init(){
+  // Try load from localStorage first
+  const saved = localStorage.getItem('invoice_data_v1');
+  if(saved){
+    try {
+      state = JSON.parse(saved);
+    } catch(e){
+      state = JSON.parse(JSON.stringify(SAMPLE));
+    }
+  }
+  populateForm();
+  renderPreview();
+}
+init();
+
+/* A small graceful fallback: if print renders weird, user can open console and run:
+   document.getElementById('invoicePreview').innerHTML to inspect DOM or use the JSON download.
+*/
+
+/* =========================
+   OPTIONAL: small safety helpers (no external libs)
+   ========================= */
+
+// Force borders before printing
+(function() {
+  var beforePrint = function() {
+    // Force all table elements to have visible borders
+    var tables = document.querySelectorAll('.inv-table, .totals table');
+    tables.forEach(function(table) {
+      table.style.border = '1px solid black';
+      table.style.borderCollapse = 'collapse';
+      
+      var cells = table.querySelectorAll('th, td');
+      cells.forEach(function(cell) {
+        cell.style.border = '1px solid black';
+      });
+    });
+  };
+  
+  if (window.matchMedia) {
+    var mediaQueryList = window.matchMedia('print');
+    mediaQueryList.addListener(function(mql) {
+      if (mql.matches) {
+        beforePrint();
+      }
+    });
+  }
+  
+  window.onbeforeprint = beforePrint;
+})();
+</script>
+
+</body>
+</html>
