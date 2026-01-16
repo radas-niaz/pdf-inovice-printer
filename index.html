@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RHG INTERIOR HOMES LTD — Invoice</title>
+<title>RIVERVIEW WINDOW COVERING LTD — Invoice</title>
 <style>
 :root {
   --bg: #f7f6f4;
@@ -178,7 +178,7 @@ legend{font-weight:600;padding:0 6px;color:var(--muted)}
 <body>
 
 <header class="topbar">
-  <h1>RHG INTERIOR HOMES LTD — Invoice</h1>
+  <h1>RIVERVIEW WINDOW COVERING LTD — Invoice</h1>
   <div class="controls">
     <button id="saveBtn">💾 Save</button>
     <button id="loadBtn">📂 Load</button>
@@ -196,7 +196,7 @@ legend{font-weight:600;padding:0 6px;color:var(--muted)}
       <label>Address<textarea name="company.address" placeholder="One line per address part"></textarea></label>
       <label>GST #<input type="text" name="company.gst"></label>
       <label>Contact<input type="text" name="company.contact"></label>
-      <label>Logo Path<input type="text" name="company.logo" value="logo.png"></label>
+      <label>Logo Path<input type="text" name="company.logo" value="logo2.png"></label>
     </fieldset>
 
     <fieldset>
@@ -237,9 +237,9 @@ legend{font-weight:600;padding:0 6px;color:var(--muted)}
 /* app.js - Editable invoice + preview + print + localStorage
    Configurable constants at top:
 */
-const LOGO_PATH = 'logo.png';
+const LOGO_PATH = 'logo2.png';
 const DEFAULT_TAX_RATE = 12;
-const PAGE_TITLE = 'RHG INTERIOR HOMES LTD — Invoice';
+const PAGE_TITLE = 'RIVERVIEW WINDOW COVERING LTD — Invoice';
 
 // Utility to select
 const $ = (s,el=document) => el.querySelector(s);
@@ -248,7 +248,7 @@ const $$ = (s,el=document) => Array.from(el.querySelectorAll(s));
 // Sample seed data
 const SAMPLE = {
   company: {
-    name: "RHG INTERIOR HOMES LTD",
+    name: "RIVERVIEW WINDOW COVERING LTD",
     address: ["114 Paramount Rd","Winnipeg MB R2X 2W3"],
     gst: "781299532rt0001",
     contact: "2046980121",
